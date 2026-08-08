@@ -1,0 +1,8 @@
+case_id,ai_diagnosis,human_decision,human_correction,reviewer
+c001,VLAN is missing,Accepted,,Human Reviewer
+C001,VLAN missing,Accepted,,Human Reviewer
+C001,VLAN missing,Accepted,,Human Reviewer
+C001,VLAN missing,Edited,VLAN 20,Human Reviewer
+C001,VLAN missing,Accepted,,Human Reviewer
+C001,VLAN missing,Edited,VLAN 20 must be created on the switch,Human Reviewer
+C001,VLAN missing,Rejected,Diagnosis needs verification,Human Reviewer
