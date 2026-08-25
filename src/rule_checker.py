@@ -1,53 +1,281 @@
-def check_diagnosis(case, diagnosis):
-    expected_fault = case.get("expected_fault", "").lower()
-    diagnosis_text = diagnosis.lower()
+# rule_checker.py
 
-    if not expected_fault:
-        return "INSUFFICIENT DATA"
-
-    # Direct match
-    if expected_fault in diagnosis_text:
-        return "PASS"
-
-    # Important keywords
-    keywords = expected_fault.replace("-", " ").split()
-
-    matched = 0
-
-    for word in keywords:
-        if len(word) > 2 and word in diagnosis_text:
-            matched += 1
-
-    # If most important words are present
-    if len(keywords) > 0 and matched / len(keywords) >= 0.5:
-        return "PASS"
-
-    return "FAIL"
+# ---------------------------------------------------------
+# NETSage-AI Rule Checker
+# ---------------------------------------------------------
 
 
-def review_case(case, diagnosis):
-    result = check_diagnosis(case, diagnosis)
+def check_diagnosis(diagnosis):
+    """
+    Checks an AI-generated diagnosis
+    using predefined networking rules.
+    """
 
-    print("\n==============================")
-    print(" Rule Checker")
-    print("==============================")
-    print("Case ID:", case.get("case_id", "Unknown"))
-    print("Expected Fault:", case.get("expected_fault", "Unknown"))
-    print("Diagnosis:", diagnosis)
-    print("Result:", result)
-    print("Human Review: Required")
-    print("==============================")
+    root_cause = str(
+        diagnosis.get("root_cause", "")
+    ).strip()
 
+    concept = str(
+        diagnosis.get("concept", "")
+    ).strip().lower()
+
+    severity = str(
+        diagnosis.get("severity", "")
+    ).strip().lower()
+
+    evidence = str(
+        diagnosis.get("evidence", "")
+    ).strip()
+
+
+    issues = []
+
+
+    # -----------------------------------------------------
+    # Rule 1 - Root cause must exist
+    # -----------------------------------------------------
+
+    if not root_cause:
+        issues.append(
+            "Root cause is missing."
+        )
+
+
+    # -----------------------------------------------------
+    # Rule 2 - Evidence must exist
+    # -----------------------------------------------------
+
+    if not evidence:
+        issues.append(
+            "Diagnostic evidence is missing."
+        )
+
+
+    # -----------------------------------------------------
+    # Rule 3 - DNS
+    # -----------------------------------------------------
+
+    if "dns" in concept:
+
+        if "dns" not in root_cause.lower():
+
+            issues.append(
+                "DNS concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 4 - DHCP
+    # -----------------------------------------------------
+
+    if "dhcp" in concept:
+
+        if "dhcp" not in root_cause.lower():
+
+            issues.append(
+                "DHCP concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 5 - VLAN
+    # -----------------------------------------------------
+
+    if "vlan" in concept:
+
+        if "vlan" not in root_cause.lower():
+
+            issues.append(
+                "VLAN concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 6 - Routing
+    # -----------------------------------------------------
+
+    if (
+        "routing" in concept
+        or "route" in concept
+    ):
+
+        keywords = [
+            "route",
+            "routing",
+            "gateway"
+        ]
+
+        if not any(
+            word in root_cause.lower()
+            for word in keywords
+        ):
+
+            issues.append(
+                "Routing concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 7 - OSPF
+    # -----------------------------------------------------
+
+    if "ospf" in concept:
+
+        if "ospf" not in root_cause.lower():
+
+            issues.append(
+                "OSPF concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 8 - ACL
+    # -----------------------------------------------------
+
+    if "acl" in concept:
+
+        if "acl" not in root_cause.lower():
+
+            issues.append(
+                "ACL concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 9 - NAT
+    # -----------------------------------------------------
+
+    if "nat" in concept:
+
+        if "nat" not in root_cause.lower():
+
+            issues.append(
+                "NAT concept does not match the root cause."
+            )
+
+
+    # -----------------------------------------------------
+    # Rule 10 - Severity
+    # -----------------------------------------------------
+
+    valid_severity = [
+        "low",
+        "medium",
+        "high",
+        "critical"
+    ]
+
+    if severity not in valid_severity:
+
+        issues.append(
+            "Invalid severity level."
+        )
+
+
+    # -----------------------------------------------------
+    # Final Result
+    # -----------------------------------------------------
+
+    if len(issues) == 0:
+
+        return {
+            "status": "VALID",
+
+            "message":
+                "Diagnosis passed all rule checks.",
+
+            "issues": [],
+
+            "corrected_diagnosis":
+                root_cause
+        }
+
+
+    else:
+
+        return {
+            "status": "REVIEW",
+
+            "message":
+                "Diagnosis requires human review.",
+
+            "issues": issues,
+
+            "corrected_diagnosis":
+                root_cause
+                + " - Requires verification"
+        }
+
+
+# ---------------------------------------------------------
+# Display Result
+# ---------------------------------------------------------
+
+def display_result(result):
+
+    print("\n==============================================")
+
+    print(" NETSage-AI RULE CHECKER")
+
+    print("==============================================")
+
+    print(
+        "Status :",
+        result["status"]
+    )
+
+    print(
+        "Message :",
+        result["message"]
+    )
+
+
+    if result["issues"]:
+
+        print("\nDetected Issues:")
+
+        for issue in result["issues"]:
+
+            print(
+                " -",
+                issue
+            )
+
+
+    print(
+        "\nCorrected Diagnosis :",
+        result["corrected_diagnosis"]
+    )
+
+    print("==============================================")
+
+
+# ---------------------------------------------------------
+# TEST
+# ---------------------------------------------------------
 
 if __name__ == "__main__":
 
-    sample_case = {
-        "case_id": "C001",
-        "expected_fault": "VLAN missing"
+    test_diagnosis = {
+
+        "root_cause":
+            "DNS configuration issue",
+
+        "concept":
+            "DNS",
+
+        "severity":
+            "High",
+
+        "evidence":
+            "DNS resolution failed"
     }
 
-    sample_diagnosis = "The VLAN is missing from the switch."
 
-    review_case(sample_case, sample_diagnosis)
+    result = check_diagnosis(
+        test_diagnosis
+    )
 
-  
+    display_result(
+        result
+    )
