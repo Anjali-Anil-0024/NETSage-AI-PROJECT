@@ -10,3 +10,28 @@ C001,VLAN missing,Edited,"VLAN 20 is missing from the swicth configuration.Verif
 C002,VLAN not allowed on trunk - Requires verification,Accepted,,Human Reviewer
 C003,Interface shutdown - Requires verification,Edited,interface shutdown- enable the interface after verification,Human Reviewer
 C003,Interface shutdown - Requires verification,Edited,interface shutdown-verify interface status and enable the inerface if required.,Human Reviewer
+C001,VLAN missing,Accepted,,Human Reviewer
+C002,VLAN not allowed on trunk,Accepted,,Human Reviewer
+C003,Interface shutdown,Accepted,,Human Reviewer
+C004,Wrong gateway configuration,Accepted,,Human Reviewer
+C005,DHCP server not providing address,Accepted,,Human Reviewer
+C006,DHCP pool exhausted,Accepted,,Human Reviewer
+C007,Missing default route,Accepted,,Human Reviewer
+C008,Missing route,Accepted,,Human Reviewer
+C009,OSPF neighbor relationship failure,Accepted,,Human Reviewer
+C010,Incorrect static route,Accepted,,Human Reviewer
+C011,DNS server failure,Accepted,,Human Reviewer
+C012,Wrong DNS configuration,Accepted,,Human Reviewer
+C013,ACL blocking traffic,Accepted,,Human Reviewer
+C014,ACL blocks ICMP,Accepted,,Human Reviewer
+C015,ACL blocks HTTP,Accepted,,Human Reviewer
+C016,NAT not configured,Accepted,,Human Reviewer
+C017,NAT configuration issue,Accepted,,Human Reviewer
+C018,PAT/NAT overload missing,Accepted,,Human Reviewer
+C018,PAT/NAT overload missing,Accepted,,Human Reviewer
+C019,Incorrect subnet mask,Accepted,,Human Reviewer
+C020,Default gateway missing,Accepted,,Human Reviewer
+C021,Switch port err-disabled,Accepted,,Human Reviewer
+C022,Interface errors,Accepted,,Human Reviewer
+C025,Missing VLAN encapsulation - Requires verification,Edited,router-on-a-stick vlan communication configuration error,Human Reviewer
+C029,Interface congestion,Edited,interface congestion,Human Reviewer

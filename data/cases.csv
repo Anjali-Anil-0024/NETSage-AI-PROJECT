@@ -1,31 +1,31 @@
-case_id,symptom,show_output,expected_fault,osi_layer,concept,serverity
-C001,"PC cannot communicate with another PC in the same VLAN","show vlan brief: VLAN 20 missing from switch","VLAN missing","Layer 2","VLAN","High"
-C002,"PC cannot reach server in VLAN 30","show interfaces trunk: VLAN 30 not allowed","VLAN not allowed on trunk","Layer 2","VLAN Trunking","High"
-C003,"PC has no network connectivity","show ip interface brief: GigabitEthernet0/1 is administratively down","Interface shutdown","Layer 1","Interface Configuration","High"
-C004,"PC gets IP address but cannot reach gateway","show ip interface brief: interface IP is incorrect","Wrong gateway configuration","Layer 3","Default Gateway","High"
-C005,"PC receives 169.254.x.x address","show ip dhcp binding: no active bindings","DHCP server not providing address","Layer 3","DHCP","High"
-C006,"Clients cannot obtain DHCP addresses","show ip dhcp pool: addresses exhausted","DHCP pool exhausted","Layer 3","DHCP","High"
-C007,"PC can access local network but not internet","show ip route: no 0.0.0.0/0 route","Missing default route","Layer 3","Routing","High"
-C008,"Router cannot reach remote network","show ip route: remote network absent","Missing route","Layer 3","Routing","High"
-C009,"Two routers cannot exchange routes","show ip ospf neighbor: no neighbors","OSPF neighbor relationship failure","Layer 3","OSPF","High"
-C010,"Remote network is unreachable","show ip route: incorrect next-hop address","Incorrect static route","Layer 3","Static Routing","High"
-C011,"PC can ping IP but cannot open website","nslookup: DNS request timed out","DNS server failure","Layer 7","DNS","Medium"
-C012,"Website name does not resolve","ipconfig /all: incorrect DNS server","Wrong DNS configuration","Layer 7","DNS","Medium"
-C013,"Internal server is unreachable from outside network","show access-lists: traffic denied","ACL blocking traffic","Layer 3","ACL","High"
-C014,"Ping is blocked but other traffic works","show access-lists: ICMP deny rule","ACL blocks ICMP","Layer 3","ACL","Medium"
-C015,"Users cannot access web server through firewall","show access-lists: HTTP denied","ACL blocks HTTP","Layer 3","ACL","High"
-C016,"Private IP users cannot access internet","show ip nat translations: no entries","NAT not configured","Layer 3","NAT","High"
-C017,"Only some private hosts can access internet","show ip nat statistics: insufficient translations","NAT configuration issue","Layer 3","NAT","High"
-C018,"Internet access fails after router restart","show running-config: NAT overload missing","PAT/NAT overload missing","Layer 3","PAT","High"
-C019,"PC has wrong subnet and cannot communicate","ipconfig: IP 192.168.1.20/16, network uses /24","Incorrect subnet mask","Layer 3","Subnetting","High"
-C020,"PC cannot communicate with another subnet","ipconfig: default gateway is blank","Default gateway missing","Layer 3","Gateway","High"
-C021,"Switch port does not forward traffic","show interfaces: port status err-disabled","Switch port err-disabled","Layer 2","Switching","High"
-C022,"Network connection is unstable","show interfaces: high input errors","Interface errors","Layer 1","Ethernet","Medium"
-C023,"PC connected to wrong VLAN","show vlan brief: port assigned to VLAN 10 instead of VLAN 20","Incorrect access VLAN","Layer 2","VLAN","High"
-C024,"Trunk link is not forming","show interfaces trunk: trunk not present","Trunk configuration mismatch","Layer 2","Trunking","High"
-C025,"Router-on-a-stick VLAN communication fails","show running-config: subinterface missing encapsulation dot1Q","Missing VLAN encapsulation","Layer 2","Inter-VLAN Routing","High"
-C026,"Wireless client cannot connect to network","show wlan: SSID disabled","Wireless SSID disabled","Layer 2","Wireless","Medium"
-C027,"Wireless users connect but cannot get IP","show ip dhcp pool: no available addresses","Wireless DHCP pool exhausted","Layer 3","Wireless DHCP","High"
-C028,"Only one device cannot access network","show interfaces: switch port administratively down","Access port shutdown","Layer 2","Switch Port","Medium"
-C029,"Network is slow and packets are dropped","show interfaces: high output drops","Interface congestion","Layer 2","Network Performance","Medium"
-C030,"Server is reachable by IP but not by hostname","nslookup: hostname not found","DNS record missing","Layer 7","DNS","Medium"
+case_id,symptom,show_output,expected_fault,osi_layer,concept,serverity,severity
+C001,PC cannot communicate with another PC in the same VLAN,show vlan brief: VLAN 20 missing from switch,VLAN missing,Layer 2,VLAN,High,Medium
+C002,PC cannot reach server in VLAN 30,show interfaces trunk: VLAN 30 not allowed,VLAN not allowed on trunk,Layer 2,VLAN Trunking,High,High
+C003,PC has no network connectivity,show ip interface brief: GigabitEthernet0/1 is administratively down,Interface shutdown,Layer 1,Interface Configuration,High,High
+C004,PC gets IP address but cannot reach gateway,show ip interface brief: interface IP is incorrect,Wrong gateway configuration,Layer 3,Default Gateway,High,High
+C005,PC receives 169.254.x.x address,show ip dhcp binding: no active bindings,DHCP server not providing address,Layer 3,DHCP,High,High
+C006,Clients cannot obtain DHCP addresses,show ip dhcp pool: addresses exhausted,DHCP pool exhausted,Layer 3,DHCP,High,High
+C007,PC can access local network but not internet,show ip route: no 0.0.0.0/0 route,Missing default route,Layer 3,Routing,High,Medium
+C008,Router cannot reach remote network,show ip route: remote network absent,Missing route,Layer 3,Routing,High,High
+C009,Two routers cannot exchange routes,show ip ospf neighbor: no neighbors,OSPF neighbor relationship failure,Layer 3,OSPF,High,High
+C010,Remote network is unreachable,show ip route: incorrect next-hop address,Incorrect static route,Layer 3,Static Routing,High,High
+C011,PC can ping IP but cannot open website,nslookup: DNS request timed out,DNS server failure,Layer 7,DNS,Medium,Medium
+C012,Website name does not resolve,ipconfig /all: incorrect DNS server,Wrong DNS configuration,Layer 7,DNS,Medium,High
+C013,Internal server is unreachable from outside network,show access-lists: traffic denied,ACL blocking traffic,Layer 3,ACL,High,Critical
+C014,Ping is blocked but other traffic works,show access-lists: ICMP deny rule,ACL blocks ICMP,Layer 3,ACL,Medium,High
+C015,Users cannot access web server through firewall,show access-lists: HTTP denied,ACL blocks HTTP,Layer 3,ACL,High,High
+C016,Private IP users cannot access internet,show ip nat translations: no entries,NAT not configured,Layer 3,NAT,High,High
+C017,Only some private hosts can access internet,show ip nat statistics: insufficient translations,NAT configuration issue,Layer 3,NAT,High,High
+C018,Internet access fails after router restart,show running-config: NAT overload missing,PAT/NAT overload missing,Layer 3,PAT,High,High
+C019,PC has wrong subnet and cannot communicate,"ipconfig: IP 192.168.1.20/16, network uses /24",Incorrect subnet mask,Layer 3,Subnetting,High,Medium
+C020,PC cannot communicate with another subnet,ipconfig: default gateway is blank,Default gateway missing,Layer 3,Gateway,High,Medium
+C021,Switch port does not forward traffic,show interfaces: port status err-disabled,Switch port err-disabled,Layer 2,Switching,High,High
+C022,Network connection is unstable,show interfaces: high input errors,Interface errors,Layer 1,Ethernet,Medium,Medium
+C023,PC connected to wrong VLAN,show vlan brief: port assigned to VLAN 10 instead of VLAN 20,Incorrect access VLAN,Layer 2,VLAN,High,Medium
+C024,Trunk link is not forming,show interfaces trunk: trunk not present,Trunk configuration mismatch,Layer 2,Trunking,High,High
+C025,Router-on-a-stick VLAN communication fails,show running-config: subinterface missing encapsulation dot1Q,Missing VLAN encapsulation,Layer 2,Inter-VLAN Routing,High,High
+C026,Wireless client cannot connect to network,show wlan: SSID disabled,Wireless SSID disabled,Layer 2,Wireless,Medium,High
+C027,Wireless users connect but cannot get IP,show ip dhcp pool: no available addresses,Wireless DHCP pool exhausted,Layer 3,Wireless DHCP,High,High
+C028,Only one device cannot access network,show interfaces: switch port administratively down,Access port shutdown,Layer 2,Switch Port,Medium,Medium
+C029,Network is slow and packets are dropped,show interfaces: high output drops,Interface congestion,Layer 2,Network Performance,Medium,High
+C030,Server is reachable by IP but not by hostname,nslookup: hostname not found,DNS record missing,Layer 7,DNS,Medium,Medium

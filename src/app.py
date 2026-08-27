@@ -5,13 +5,17 @@ from collections import Counter
 
 app = Flask(__name__)
 
+# ---------------------------------------------------------
+# FILE PATHS
+# ---------------------------------------------------------
+
 CASES_FILE = "data/cases.csv"
 REVIEW_FILE = "logs/review_log.csv"
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # LOAD CSV
-# -----------------------------
+# ---------------------------------------------------------
 
 def load_csv(file_path):
 
@@ -26,76 +30,191 @@ def load_csv(file_path):
             newline=""
         ) as file:
 
-            return list(csv.DictReader(file))
+            reader = csv.DictReader(file)
 
-    except Exception:
+            rows = []
+
+            for row in reader:
+
+                clean_row = {}
+
+                for key, value in row.items():
+
+                    if key is not None:
+                        clean_key = key.strip()
+                        clean_value = value.strip() if value else ""
+
+                        clean_row[clean_key] = clean_value
+
+                rows.append(clean_row)
+
+            return rows
+
+    except Exception as error:
+
+        print("CSV Error:", error)
+
         return []
 
 
-# -----------------------------
+# ---------------------------------------------------------
 # DASHBOARD DATA
-# -----------------------------
+# ---------------------------------------------------------
 
 def get_dashboard_data():
 
     cases = load_csv(CASES_FILE)
     reviews = load_csv(REVIEW_FILE)
 
+    # -----------------------------------------------------
+    # Total cases
+    # -----------------------------------------------------
+
     total_cases = len(cases)
 
-    severity_counter = Counter()
+    # -----------------------------------------------------
+    # Severity distribution
+    # -----------------------------------------------------
 
-    concept_counter = Counter()
+    severities = Counter()
 
     for case in cases:
 
-        severity = str(
-            case.get("severity", "Unknown")
+        severity = case.get(
+            "severity",
+            "Unknown"
         ).strip()
 
-        concept = str(
-            case.get("concept", "Unknown")
+        if not severity:
+            severity = "Unknown"
+
+        severities[severity] += 1
+
+    # -----------------------------------------------------
+    # Concept distribution
+    # -----------------------------------------------------
+
+    concepts = Counter()
+
+    for case in cases:
+
+        concept = case.get(
+            "concept",
+            "Unknown"
         ).strip()
 
-        severity_counter[severity] += 1
-        concept_counter[concept] += 1
+        if not concept:
+            concept = "Unknown"
 
+        concepts[concept] += 1
 
-    accepted = 0
-    edited = 0
-    rejected = 0
+    # -----------------------------------------------------
+    # IMPORTANT:
+    # Only latest review for each Case ID is counted.
+    #
+    # This prevents:
+    #
+    # C001 Accepted
+    # C001 Edited
+    # C001 Accepted
+    #
+    # from being counted as 3 reviewed cases.
+    # -----------------------------------------------------
+
+    latest_reviews = {}
 
     for review in reviews:
 
-        decision = str(
-            review.get("human_decision", "")
+        case_id = review.get(
+            "case_id",
+            ""
         ).strip()
 
-        if decision.lower() == "accepted":
-            accepted += 1
+        if case_id:
 
-        elif decision.lower() == "edited":
-            edited += 1
+            latest_reviews[case_id] = review
 
-        elif decision.lower() == "rejected":
-            rejected += 1
+    # -----------------------------------------------------
+    # Review decisions
+    # -----------------------------------------------------
 
+    decisions = Counter()
 
-    reviewed = accepted + edited + rejected
+    for review in latest_reviews.values():
+
+        decision = review.get(
+            "human_decision",
+            ""
+        ).strip()
+
+        if decision:
+            decisions[decision] += 1
+
+    accepted = decisions.get(
+        "Accepted",
+        0
+    )
+
+    edited = decisions.get(
+        "Edited",
+        0
+    )
+
+    rejected = decisions.get(
+        "Rejected",
+        0
+    )
+
+    # -----------------------------------------------------
+    # Reviewed count
+    # -----------------------------------------------------
+
+    reviewed = (
+        accepted
+        + edited
+        + rejected
+    )
+
+    # Never allow reviewed > total cases
+    reviewed = min(
+        reviewed,
+        total_cases
+    )
+
+    # -----------------------------------------------------
+    # AI Agreement
+    # -----------------------------------------------------
 
     if reviewed > 0:
-        agreement = round(
-            (accepted / reviewed) * 100,
-            1
-        )
+
+        agreement = (
+            accepted / reviewed
+        ) * 100
+
     else:
+
         agreement = 0
 
+    # -----------------------------------------------------
+    # Remaining cases
+    # -----------------------------------------------------
+
+    remaining = max(
+        total_cases - reviewed,
+        0
+    )
+
+    # -----------------------------------------------------
+    # Return dashboard data
+    # -----------------------------------------------------
 
     return {
+
         "total_cases": total_cases,
 
         "reviewed": reviewed,
+
+        "remaining": remaining,
 
         "accepted": accepted,
 
@@ -103,23 +222,23 @@ def get_dashboard_data():
 
         "rejected": rejected,
 
-        "agreement": agreement,
-
-        "severities": dict(
-            severity_counter
+        "agreement": round(
+            agreement,
+            1
         ),
 
-        "concepts": dict(
-            concept_counter
-        )
+        "severities": severities,
+
+        "concepts": concepts
     }
 
 
-# -----------------------------
-# HTML
-# -----------------------------
+# ---------------------------------------------------------
+# HTML DASHBOARD
+# ---------------------------------------------------------
 
 HTML = """
+
 <!DOCTYPE html>
 
 <html>
@@ -136,9 +255,9 @@ HTML = """
 
 <style>
 
-/* ---------------------------
-   BASIC
---------------------------- */
+/* -------------------------------------------------------
+   GLOBAL
+------------------------------------------------------- */
 
 * {
     box-sizing: border-box;
@@ -153,99 +272,88 @@ body {
         Helvetica,
         sans-serif;
 
-    background: #f1f5f9;
+    background:
+        linear-gradient(
+            135deg,
+            #eef4ff,
+            #f8fbff
+        );
 
-    color: #1e293b;
-
+    color: #172033;
 }
 
 
-/* ---------------------------
+/* -------------------------------------------------------
    HEADER
---------------------------- */
+------------------------------------------------------- */
 
 .header {
 
     background:
         linear-gradient(
             135deg,
-            #0f172a,
-            #1e3a8a
+            #071b52,
+            #0b5ed7
         );
 
     color: white;
 
-    padding: 28px 40px;
+    padding: 35px 7%;
 
+    box-shadow:
+        0 8px 25px
+        rgba(0,0,0,0.15);
 }
 
+.header h1 {
 
-.header-content {
+    margin: 0;
 
-    max-width: 1200px;
-
-    margin: auto;
-
-}
-
-
-.logo {
-
-    font-size: 30px;
-
-    font-weight: bold;
+    font-size: 42px;
 
     letter-spacing: 1px;
-
 }
 
-
-.logo span {
+.header h1 span {
 
     color: #38bdf8;
-
 }
-
 
 .header p {
 
-    margin: 8px 0 0;
+    margin-top: 10px;
 
-    color: #cbd5e1;
+    font-size: 17px;
 
-    font-size: 14px;
-
+    opacity: 0.9;
 }
 
 
-/* ---------------------------
-   MAIN
---------------------------- */
+/* -------------------------------------------------------
+   CONTAINER
+------------------------------------------------------- */
 
 .container {
 
-    max-width: 1200px;
+    width: 90%;
+
+    max-width: 1400px;
 
     margin: 30px auto;
-
-    padding: 0 20px;
-
 }
 
 
-/* ---------------------------
-   STATUS
---------------------------- */
+/* -------------------------------------------------------
+   SYSTEM STATUS
+------------------------------------------------------- */
 
 .status {
 
     background: white;
 
-    border-radius: 12px;
+    border-radius: 18px;
 
-    padding: 16px 20px;
-
-    margin-bottom: 22px;
+    padding: 22px 28px;
 
     display: flex;
 
@@ -254,292 +362,222 @@ body {
     align-items: center;
 
     box-shadow:
-        0 3px 12px
-        rgba(0,0,0,0.06);
+        0 8px 25px
+        rgba(31,45,61,0.08);
 
+    margin-bottom: 25px;
 }
 
+.status h2 {
 
-.status-title {
+    margin: 0;
 
-    font-weight: bold;
-
+    font-size: 22px;
 }
 
+.status p {
+
+    margin: 7px 0 0;
+
+    color: #64748b;
+}
 
 .online {
 
     color: #16a34a;
 
-    font-size: 14px;
-
     font-weight: bold;
 
-}
+    display: flex;
 
+    align-items: center;
+
+    gap: 8px;
+}
 
 .dot {
 
-    display: inline-block;
+    width: 11px;
 
-    width: 9px;
-
-    height: 9px;
+    height: 11px;
 
     background: #22c55e;
 
     border-radius: 50%;
 
-    margin-right: 6px;
-
+    display: inline-block;
 }
 
 
-/* ---------------------------
+/* -------------------------------------------------------
    CARDS
---------------------------- */
+------------------------------------------------------- */
 
 .cards {
 
     display: grid;
 
     grid-template-columns:
-        repeat(5, 1fr);
+        repeat(
+            5,
+            1fr
+        );
 
-    gap: 16px;
+    gap: 18px;
 
+    margin-bottom: 25px;
 }
-
 
 .card {
 
     background: white;
 
-    border-radius: 14px;
+    border-radius: 18px;
 
-    padding: 20px;
+    padding: 25px;
 
     box-shadow:
-        0 4px 15px
-        rgba(0,0,0,0.06);
+        0 8px 25px
+        rgba(31,45,61,0.08);
 
-    border: 1px solid #e2e8f0;
-
-    transition: 0.2s;
-
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
 }
-
 
 .card:hover {
 
-    transform: translateY(-4px);
+    transform:
+        translateY(-4px);
 
+    box-shadow:
+        0 14px 30px
+        rgba(31,45,61,0.12);
 }
-
 
 .card-title {
 
     color: #64748b;
 
-    font-size: 12px;
+    font-size: 13px;
 
     font-weight: bold;
 
-}
+    text-transform:
+        uppercase;
 
+    letter-spacing: 1px;
+}
 
 .card-value {
 
-    font-size: 30px;
+    font-size: 35px;
 
     font-weight: bold;
 
     margin-top: 10px;
+}
 
+.blue {
+    color: #2563eb;
+}
+
+.green {
+    color: #16a34a;
+}
+
+.orange {
+    color: #f59e0b;
+}
+
+.red {
+    color: #dc2626;
+}
+
+.purple {
+    color: #7c3aed;
 }
 
 
-/* ---------------------------
-   SECTIONS
---------------------------- */
+/* -------------------------------------------------------
+   GRID
+------------------------------------------------------- */
 
 .grid {
 
     display: grid;
 
     grid-template-columns:
-        1fr 1fr;
+        repeat(
+            2,
+            1fr
+        );
 
-    gap: 20px;
-
-    margin-top: 22px;
-
+    gap: 25px;
 }
 
+
+/* -------------------------------------------------------
+   SECTION
+------------------------------------------------------- */
 
 .section {
 
     background: white;
 
-    border-radius: 14px;
+    border-radius: 18px;
 
-    padding: 22px;
+    padding: 25px;
 
     box-shadow:
-        0 4px 15px
-        rgba(0,0,0,0.05);
-
+        0 8px 25px
+        rgba(31,45,61,0.08);
 }
-
 
 .section h2 {
 
     margin-top: 0;
 
-    font-size: 19px;
-
+    font-size: 21px;
 }
 
-
-.section-subtitle {
+.subtitle {
 
     color: #64748b;
 
-    font-size: 13px;
+    margin-top: -8px;
 
     margin-bottom: 20px;
-
 }
 
 
-/* ---------------------------
-   REVIEW
---------------------------- */
-
-.review-row {
-
-    display: flex;
-
-    justify-content: space-between;
-
-    align-items: center;
-
-    padding: 13px;
-
-    margin-bottom: 10px;
-
-    border-radius: 9px;
-
-    background: #f8fafc;
-
-}
-
-
-.review-count {
-
-    font-weight: bold;
-
-    font-size: 18px;
-
-}
-
-
-.accepted {
-
-    color: #16a34a;
-
-}
-
-
-.edited {
-
-    color: #d97706;
-
-}
-
-
-.rejected {
-
-    color: #dc2626;
-
-}
-
-
-/* ---------------------------
-   SEVERITY
---------------------------- */
-
-.severity-row {
-
-    margin-bottom: 18px;
-
-}
-
-
-.severity-top {
-
-    display: flex;
-
-    justify-content: space-between;
-
-    margin-bottom: 7px;
-
-    font-size: 13px;
-
-    font-weight: bold;
-
-}
-
-
-.bar {
-
-    height: 9px;
-
-    background: #e2e8f0;
-
-    border-radius: 10px;
-
-    overflow: hidden;
-
-}
-
-
-.fill {
-
-    height: 100%;
-
-    border-radius: 10px;
-
-}
-
-
-/* ---------------------------
+/* -------------------------------------------------------
    TABLE
---------------------------- */
+------------------------------------------------------- */
 
 table {
 
     width: 100%;
 
-    border-collapse: collapse;
-
+    border-collapse:
+        collapse;
 }
-
 
 th {
 
     text-align: left;
 
-    background: #f8fafc;
-
     padding: 13px;
 
-    color: #475569;
+    background: #f1f5f9;
+
+    color: #334155;
 
     font-size: 13px;
 
+    text-transform:
+        uppercase;
 }
-
 
 td {
 
@@ -547,93 +585,82 @@ td {
 
     border-bottom:
         1px solid #e2e8f0;
+}
 
-    font-size: 14px;
+tr:last-child td {
 
+    border-bottom: none;
 }
 
 
-/* ---------------------------
-   CONCEPT
---------------------------- */
+/* -------------------------------------------------------
+   BADGES
+------------------------------------------------------- */
 
-.concept-row {
+.badge {
 
-    display: flex;
+    display: inline-block;
 
-    justify-content: space-between;
+    padding: 6px 12px;
 
-    padding: 13px 0;
+    border-radius: 20px;
 
-    border-bottom:
-        1px solid #e2e8f0;
-
-}
-
-
-.concept-count {
-
-    color: #2563eb;
+    font-size: 12px;
 
     font-weight: bold;
+}
 
+.badge-green {
+
+    background: #dcfce7;
+
+    color: #15803d;
+}
+
+.badge-orange {
+
+    background: #fef3c7;
+
+    color: #b45309;
+}
+
+.badge-red {
+
+    background: #fee2e2;
+
+    color: #b91c1c;
 }
 
 
-/* ---------------------------
-   RESPONSIVE
---------------------------- */
+/* -------------------------------------------------------
+   RESPONSIBLE AI
+------------------------------------------------------- */
 
-@media(max-width: 1000px) {
+.responsible {
 
-    .cards {
+    margin-top: 25px;
 
-        grid-template-columns:
-            repeat(3, 1fr);
+    background:
+        linear-gradient(
+            135deg,
+            #eff6ff,
+            #f5f3ff
+        );
 
-    }
+    border: 1px solid #dbeafe;
+}
 
+.responsible p {
+
+    color: #475569;
+
+    line-height: 1.7;
 }
 
 
-@media(max-width: 700px) {
-
-    .cards {
-
-        grid-template-columns:
-            repeat(2, 1fr);
-
-    }
-
-    .grid {
-
-        grid-template-columns: 1fr;
-
-    }
-
-}
-
-
-@media(max-width: 450px) {
-
-    .cards {
-
-        grid-template-columns: 1fr;
-
-    }
-
-    .header {
-
-        padding: 25px 20px;
-
-    }
-
-}
-
-
-/* ---------------------------
+/* -------------------------------------------------------
    FOOTER
---------------------------- */
+------------------------------------------------------- */
 
 .footer {
 
@@ -641,10 +668,70 @@ td {
 
     color: #64748b;
 
-    font-size: 12px;
-
     padding: 30px;
 
+    font-size: 13px;
+}
+
+
+/* -------------------------------------------------------
+   RESPONSIVE
+------------------------------------------------------- */
+
+@media(max-width: 1100px) {
+
+    .cards {
+
+        grid-template-columns:
+            repeat(
+                3,
+                1fr
+            );
+    }
+}
+
+@media(max-width: 750px) {
+
+    .cards {
+
+        grid-template-columns:
+            repeat(
+                2,
+                1fr
+            );
+    }
+
+    .grid {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .header h1 {
+
+        font-size: 32px;
+    }
+
+}
+
+@media(max-width: 500px) {
+
+    .cards {
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .status {
+
+        flex-direction:
+            column;
+
+        align-items:
+            flex-start;
+
+        gap: 15px;
+    }
 }
 
 </style>
@@ -655,26 +742,19 @@ td {
 <body>
 
 
-<!-- HEADER -->
+<!-- =====================================================
+     HEADER
+===================================================== -->
 
 <div class="header">
 
-    <div class="header-content">
+    <h1>
+        NET<span>Sage-AI</span>
+    </h1>
 
-        <div class="logo">
-
-            NET<span>Sage</span>-AI
-
-        </div>
-
-        <p>
-
-            AI-Assisted Network
-            Troubleshooting Dashboard
-
-        </p>
-
-    </div>
+    <p>
+        AI-Assisted Network Troubleshooting Dashboard
+    </p>
 
 </div>
 
@@ -682,22 +762,23 @@ td {
 <div class="container">
 
 
-<!-- SYSTEM STATUS -->
+<!-- =====================================================
+     STATUS
+===================================================== -->
 
 <div class="status">
 
     <div>
 
-        <div class="status-title">
+        <h2>
             Network Intelligence Center
-        </div>
+        </h2>
 
-        <small>
+        <p>
             AI diagnosis and human review monitoring
-        </small>
+        </p>
 
     </div>
-
 
     <div class="online">
 
@@ -710,80 +791,84 @@ td {
 </div>
 
 
-<!-- KPI CARDS -->
+<!-- =====================================================
+     MAIN CARDS
+===================================================== -->
 
 <div class="cards">
 
 
-    <div class="card">
+<div class="card">
 
-        <div class="card-title">
-            TOTAL CASES
-        </div>
-
-        <div class="card-value">
-            {{ data.total_cases }}
-        </div>
-
+    <div class="card-title">
+        Total Cases
     </div>
 
-
-    <div class="card">
-
-        <div class="card-title">
-            REVIEWED
-        </div>
-
-        <div class="card-value">
-            {{ data.reviewed }}
-        </div>
-
+    <div class="card-value blue">
+        {{ data.total_cases }}
     </div>
 
+</div>
 
-    <div class="card">
 
-        <div class="card-title">
-            ACCEPTED
-        </div>
+<div class="card">
 
-        <div class="card-value accepted">
-            {{ data.accepted }}
-        </div>
-
+    <div class="card-title">
+        Reviewed
     </div>
 
-
-    <div class="card">
-
-        <div class="card-title">
-            EDITED
-        </div>
-
-        <div class="card-value edited">
-            {{ data.edited }}
-        </div>
-
+    <div class="card-value purple">
+        {{ data.reviewed }}
     </div>
 
+</div>
 
-    <div class="card">
 
-        <div class="card-title">
-            AI AGREEMENT
-        </div>
+<div class="card">
 
-        <div class="card-value">
-            {{ data.agreement }}%
-        </div>
-
+    <div class="card-title">
+        Accepted
     </div>
+
+    <div class="card-value green">
+        {{ data.accepted }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="card-title">
+        Edited
+    </div>
+
+    <div class="card-value orange">
+        {{ data.edited }}
+    </div>
+
+</div>
+
+
+<div class="card">
+
+    <div class="card-title">
+        AI Agreement
+    </div>
+
+    <div class="card-value blue">
+        {{ data.agreement }}%
+    </div>
+
+</div>
 
 
 </div>
 
 
-<!-- TWO COLUMNS -->
+<!-- =====================================================
+     TABLES
+===================================================== -->
 
 <div class="grid">
 
@@ -792,51 +877,90 @@ td {
 
 <div class="section">
 
-    <h2>Human Review Summary</h2>
+    <h2>
+        Human Review Summary
+    </h2>
 
-    <div class="section-subtitle">
+    <p class="subtitle">
         AI diagnosis validation results
-    </div>
+    </p>
 
 
-    <div class="review-row">
+    <table>
 
-        <span class="accepted">
-            ● Accepted
-        </span>
+        <tr>
 
-        <span class="review-count">
-            {{ data.accepted }}
-        </span>
+            <th>
+                Decision
+            </th>
 
-    </div>
+            <th>
+                Count
+            </th>
 
-
-    <div class="review-row">
-
-        <span class="edited">
-            ● Edited
-        </span>
-
-        <span class="review-count">
-            {{ data.edited }}
-        </span>
-
-    </div>
+        </tr>
 
 
-    <div class="review-row">
+        <tr>
 
-        <span class="rejected">
-            ● Rejected
-        </span>
+            <td>
+                <span class="badge badge-green">
+                    Accepted
+                </span>
+            </td>
 
-        <span class="review-count">
-            {{ data.rejected }}
-        </span>
+            <td>
+                {{ data.accepted }}
+            </td>
 
-    </div>
+        </tr>
 
+
+        <tr>
+
+            <td>
+                <span class="badge badge-orange">
+                    Edited
+                </span>
+            </td>
+
+            <td>
+                {{ data.edited }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td>
+                <span class="badge badge-red">
+                    Rejected
+                </span>
+            </td>
+
+            <td>
+                {{ data.rejected }}
+            </td>
+
+        </tr>
+
+
+        <tr>
+
+            <td>
+                <strong>
+                    Remaining
+                </strong>
+            </td>
+
+            <td>
+                {{ data.remaining }}
+            </td>
+
+        </tr>
+
+    </table>
 
 </div>
 
@@ -845,165 +969,177 @@ td {
 
 <div class="section">
 
-    <h2>Severity Distribution</h2>
+    <h2>
+        Severity Distribution
+    </h2>
 
-    <div class="section-subtitle">
+    <p class="subtitle">
         Network issue severity analysis
-    </div>
+    </p>
 
 
-    {% set total =
-        data.total_cases
-        if data.total_cases > 0
-        else 1
-    %}
+    <table>
+
+        <tr>
+
+            <th>
+                Severity
+            </th>
+
+            <th>
+                Cases
+            </th>
+
+        </tr>
 
 
-    {% for severity, count in data.severities.items() %}
+        {% for severity, count in data.severities.items() %}
 
-    <div class="severity-row">
+        <tr>
 
-        <div class="severity-top">
+            <td>
 
-            <span>
-                {{ severity }}
-            </span>
+                {% if severity == "Critical" %}
 
-            <span>
-                {{ count }}
-            </span>
+                    <span class="badge badge-red">
+                        {{ severity }}
+                    </span>
 
-        </div>
+                {% elif severity == "High" %}
 
+                    <span class="badge badge-red">
+                        {{ severity }}
+                    </span>
 
-        <div class="bar">
+                {% elif severity == "Medium" %}
 
-            <div
-                class="fill"
-                style="
-                width: {{ (count / total) * 100 }}%;
-                background:
-                {% if severity|lower == 'critical' %}
-                    #dc2626
-                {% elif severity|lower == 'high' %}
-                    #f97316
-                {% elif severity|lower == 'medium' %}
-                    #eab308
+                    <span class="badge badge-orange">
+                        {{ severity }}
+                    </span>
+
+                {% elif severity == "Low" %}
+
+                    <span class="badge badge-green">
+                        {{ severity }}
+                    </span>
+
                 {% else %}
-                    #22c55e
-                {% endif %};
-                ">
-            </div>
 
-        </div>
+                    {{ severity }}
 
-    </div>
+                {% endif %}
 
-    {% endfor %}
+            </td>
 
+            <td>
+                {{ count }}
+            </td>
 
-</div>
-
-
-</div>
-
-
-<!-- NETWORK ISSUES -->
-
-<div class="section" style="margin-top:22px;">
-
-    <h2>Network Issue Types</h2>
-
-    <div class="section-subtitle">
-        Detected troubleshooting concepts
-    </div>
-
-
-    {% if data.concepts %}
-
-        {% for concept, count in data.concepts.items() %}
-
-        <div class="concept-row">
-
-            <span>
-                {{ concept }}
-            </span>
-
-            <span class="concept-count">
-                {{ count }} cases
-            </span>
-
-        </div>
+        </tr>
 
         {% endfor %}
 
-    {% else %}
+    </table>
 
-        <p style="color:#64748b;">
-            No network issue data available.
-        </p>
+</div>
 
-    {% endif %}
 
+<!-- NETWORK CONCEPTS -->
+
+<div class="section">
+
+    <h2>
+        Network Issue Types
+    </h2>
+
+    <p class="subtitle">
+        Troubleshooting concept distribution
+    </p>
+
+
+    <table>
+
+        <tr>
+
+            <th>
+                Concept
+            </th>
+
+            <th>
+                Cases
+            </th>
+
+        </tr>
+
+
+        {% for concept, count in data.concepts.items() %}
+
+        <tr>
+
+            <td>
+                {{ concept }}
+            </td>
+
+            <td>
+                {{ count }}
+            </td>
+
+        </tr>
+
+        {% endfor %}
+
+    </table>
 
 </div>
 
 
 <!-- RESPONSIBLE AI -->
 
-<div class="section" style="margin-top:22px;">
+<div class="section responsible">
 
-    <h2>Responsible AI</h2>
+    <h2>
+        Responsible AI
+    </h2>
 
-    <div class="section-subtitle">
-        Human-in-the-loop safety mechanism
-    </div>
+    <p>
+        NETSage-AI provides network troubleshooting
+        recommendations, but configuration changes
+        always require human validation.
+    </p>
 
+    <p>
+        Every diagnosis can be
+        <strong>Accepted</strong>,
+        <strong>Edited</strong>,
+        or
+        <strong>Rejected</strong>
+        by a human reviewer.
+    </p>
 
-    <div style="
-        background:#eff6ff;
-        padding:18px;
-        border-radius:10px;
-        line-height:1.7;
-        font-size:14px;
-    ">
-
+    <p>
         <strong>
-            Human verification is required.
+            Human-corrected cases:
         </strong>
 
-        <p>
-            NETSage-AI provides network diagnosis
-            recommendations, but configuration changes
-            require human validation.
-        </p>
-
-        <p style="margin-bottom:0;">
-
-            ✓ Accept AI diagnosis
-
-            &nbsp;&nbsp;
-
-            ✎ Edit diagnosis
-
-            &nbsp;&nbsp;
-
-            ✕ Reject diagnosis
-
-        </p>
-
-    </div>
+        {{ data.edited }}
+    </p>
 
 </div>
 
 
 </div>
 
+
+<!-- =====================================================
+     FOOTER
+===================================================== -->
 
 <div class="footer">
 
-    NETSage-AI © 2026
-    | AI-Assisted Network Troubleshooting
+    NETSage-AI • Responsible AI Network Troubleshooting
+
+</div>
+
 
 </div>
 
@@ -1011,12 +1147,13 @@ td {
 </body>
 
 </html>
+
 """
 
 
-# -----------------------------
-# ROUTE
-# -----------------------------
+# ---------------------------------------------------------
+# DASHBOARD ROUTE
+# ---------------------------------------------------------
 
 @app.route("/")
 def dashboard():
@@ -1029,11 +1166,23 @@ def dashboard():
     )
 
 
-# -----------------------------
-# START SERVER
-# -----------------------------
+# ---------------------------------------------------------
+# RUN APPLICATION
+# ---------------------------------------------------------
 
 if __name__ == "__main__":
+
+    print()
+    print("=" * 55)
+    print(" NETSage-AI")
+    print(" AI-Assisted Network Troubleshooting")
+    print("=" * 55)
+    print()
+    print("Dashboard:")
+    print("http://127.0.0.1:5000/")
+    print()
+    print("Press CTRL+C to stop.")
+    print("=" * 55)
 
     app.run(
         debug=True,
